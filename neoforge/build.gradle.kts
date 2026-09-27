@@ -1,0 +1,37 @@
+// NeoForge 1.21.1 适配层：只做"游戏侧接线"，全部业务在 :core
+// 以后 Forge/Fabric 适配层复用同一个 core，只需重写本文件级别的代码
+plugins {
+    id("net.neoforged.moddev") version "2.0.147"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+// 把 core 源码一起编进 mod jar（免去 JarJar 版本元数据，跨版本搬运最省事）
+sourceSets {
+    main {
+        java {
+            srcDir(file("../core/src/main/java"))
+        }
+    }
+}
+
+neoForge {
+    version = "21.1.251"
+
+    mods {
+        create("mcmonitor") {
+            sourceSet(sourceSets.main.get())
+        }
+    }
+
+    runs {
+        // 本 mod 面向专用服务器；dev 环境只配 server run
+        create("server") {
+            server()
+        }
+    }
+}

@@ -1,0 +1,68 @@
+package com.osskn4w7.mcmonitor.core.auth;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+// 登录防爆破：按 IP 记失败次数，连续失败 N 次封禁一段时间；成功登录清零
+public final class AuthGuard {
+
+    private static final int MAX_FAILURES = 5;
+    private static final long BAN_MILLIS = 10 * 60 * 1000L; // 封禁 10 分钟
+    private static final long MIN_INTERVAL_MILLIS = 300;    // 同一 IP 两次尝试至少间隔 300ms
+
+    private static final class Entry {
+        int failures;
+        long bannedUntil;
+        long lastAttempt;
+    }
+
+    private final Map<String, Entry> entries = new ConcurrentHashMap<>();
+
+    // 返回 null 表示允许；否则返回拒绝原因。（只用于"请求新挑战"阶段）
+    public String precheck(String ip) {
+        long now = System.currentTimeMillis();
+        Entry e = entries.computeIfAbsent(ip, k -> new Entry());
+        synchronized (e) {
+            if (now < e.bannedUntil) {
+                long remainSec = (e.bannedUntil - now) / 1000;
+                return "尝试过于频繁，请 " + remainSec + " 秒后再试";
+            }
+            if (now - e.lastAttempt < MIN_INTERVAL_MILLIS) {
+                return "操作太快，请稍候";
+            }
+            e.lastAttempt = now;
+            return null;
+        }
+    }
+
+    // 响应提交阶段只查封禁（挑战+响应对算一次尝试，不应互相触发限频）
+    public String ifBanned(String ip) {
+        long now = System.currentTimeMillis();
+        Entry e = entries.get(ip);
+        if (e == null) return null;
+        synchronized (e) {
+            if (now < e.bannedUntil) {
+                long remainSec = (e.bannedUntil - now) / 1000;
+                return "尝试过于频繁，请 " + remainSec + " 秒后再试";
+            }
+            return null;
+        }
+    }
+
+    public void recordFailure(String ip) {
+        Entry e = entries.get(ip);
+        if (e == null) return;
+        synchronized (e) {
+            e.failures++;
+            if (e.failures >= MAX_FAILURES) {
+                e.bannedUntil = System.currentTimeMillis() + BAN_MILLIS;
+                e.failures = 0;
+            }
+        }
+    }
+
+    public void recordSuccess(String ip) {
+        Entry e = entries.get(ip);
+        if (e != null) synchronized (e) { e.failures = 0; }
+    }
+}

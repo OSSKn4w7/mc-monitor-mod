@@ -1,0 +1,152 @@
+package com.osskn4w7.mcmonitor.core.auth;
+
+import com.osskn4w7.mcmonitor.core.json.MiniJson;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.Mac;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+
+// 监控密码的完整生命周期：
+//  - 设置：校验复杂度策略 -> 生成随机盐 -> PBKDF2-HMAC-SHA256 计算"验证器" -> 存文件（密码本体不落盘）
+//  - 登录：beginChallenge() 下发随机 nonce 并暂存 -> verify() 校验 HMAC(验证器, nonce)，nonce 一次性
+//    （防重放、防时序攻击、密码与验证器均不过网）
+public final class PasswordAuth {
+
+    public static final int ITERATIONS = 150_000;
+    public static final int KEY_BITS = 256;
+    private static final int MIN_LENGTH = 8;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    private final Path file;
+    private volatile byte[] salt = null;
+    private volatile byte[] verifier = null;
+    private volatile int iterations = ITERATIONS;
+    private volatile byte[] pendingNonce = null; // 已下发、等待响应的挑战
+
+    public PasswordAuth(Path file) {
+        this.file = file;
+        load();
+    }
+
+    public boolean isConfigured() {
+        return verifier != null;
+    }
+
+    // ---------- 密码策略：长度>=8，且必须同时含 数字/小写/大写/符号 ----------
+    public static String checkPolicy(String password) {
+        if (password == null || password.length() < MIN_LENGTH) return "密码长度至少 " + MIN_LENGTH + " 位";
+        boolean digit = false, lower = false, upper = false, symbol = false;
+        for (int i = 0; i < password.length(); i++) {
+            char c = password.charAt(i);
+            if (c >= '0' && c <= '9') digit = true;
+            else if (c >= 'a' && c <= 'z') lower = true;
+            else if (c >= 'A' && c <= 'Z') upper = true;
+            else symbol = true;
+        }
+        if (!digit) return "密码必须包含数字";
+        if (!lower) return "密码必须包含小写字母";
+        if (!upper) return "密码必须包含大写字母";
+        if (!symbol) return "密码必须包含符号（非字母数字）";
+        return null; // null = 通过
+    }
+
+    // ---------- 设置/修改密码 ----------
+    public synchronized void set(String password) throws IOException {
+        byte[] newSalt = new byte[16];
+        RANDOM.nextBytes(newSalt);
+        byte[] newVerifier = pbkdf2(password, newSalt, ITERATIONS);
+        save(newSalt, ITERATIONS, newVerifier);
+        this.salt = newSalt;
+        this.verifier = newVerifier;
+        this.iterations = ITERATIONS;
+        this.pendingNonce = null;
+    }
+
+    // ---------- 登录第 1 步：生成并下发挑战 ----------
+    public synchronized Map<String, Object> beginChallenge() {
+        if (verifier == null) throw new IllegalStateException("尚未设置监控密码");
+        byte[] nonce = new byte[32];
+        RANDOM.nextBytes(nonce);
+        this.pendingNonce = nonce;
+        Map<String, Object> m = new HashMap<>();
+        m.put("type", "challenge");
+        m.put("salt", Base64.getEncoder().encodeToString(salt));
+        m.put("iters", (long) iterations);
+        m.put("keyBits", (long) KEY_BITS);
+        m.put("nonce", Base64.getEncoder().encodeToString(nonce));
+        return m;
+    }
+
+    // ---------- 登录第 2 步：校验响应（恒定时间，nonce 用后即焚） ----------
+    public synchronized boolean verify(String responseBase64) {
+        byte[] nonce = this.pendingNonce;
+        this.pendingNonce = null;
+        if (verifier == null || nonce == null || responseBase64 == null || responseBase64.isEmpty()) return false;
+        try {
+            byte[] resp = Base64.getDecoder().decode(responseBase64);
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(verifier, "HmacSHA256"));
+            return MessageDigest.isEqual(mac.doFinal(nonce), resp);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // ---------- App 端复用的算法（公开文档用） ----------
+    // verifier = PBKDF2WithHmacSHA256(password, salt, iters, keyBits)
+    // response = HmacSHA256(key = verifier, message = nonce)
+    public static byte[] pbkdf2(String password, byte[] salt, int iterations) {
+        try {
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, iterations, KEY_BITS);
+            return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded();
+        } catch (Exception e) {
+            throw new IllegalStateException("PBKDF2 不可用", e);
+        }
+    }
+
+    public static byte[] hmacSha256(byte[] key, byte[] message) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(key, "HmacSHA256"));
+            return mac.doFinal(message);
+        } catch (Exception e) {
+            throw new IllegalStateException("HMAC 不可用", e);
+        }
+    }
+
+    // ---------- 持久化：文件里只有 盐+迭代次数+验证器 ----------
+    private void save(byte[] salt, int iters, byte[] verifier) throws IOException {
+        Map<String, Object> m = new HashMap<>();
+        m.put("salt", Base64.getEncoder().encodeToString(salt));
+        m.put("iters", (long) iters);
+        m.put("verifier", Base64.getEncoder().encodeToString(verifier));
+        m.put("note", "只存 PBKDF2 验证器，不存密码。删除此文件即可重设监控密码。");
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, MiniJson.write(m), StandardCharsets.UTF_8);
+    }
+
+    private void load() {
+        try {
+            if (!Files.exists(file)) return;
+            Map<String, Object> m = MiniJson.parseObject(Files.readString(file, StandardCharsets.UTF_8));
+            this.salt = Base64.getDecoder().decode((String) m.get("salt"));
+            this.verifier = Base64.getDecoder().decode((String) m.get("verifier"));
+            this.iterations = (int) (long) (Long) m.get("iters");
+        } catch (Exception e) {
+            // 配置损坏时不加载，视为未设置（isConfigured=false 会拒绝登录）
+            this.salt = null;
+            this.verifier = null;
+        }
+    }
+}

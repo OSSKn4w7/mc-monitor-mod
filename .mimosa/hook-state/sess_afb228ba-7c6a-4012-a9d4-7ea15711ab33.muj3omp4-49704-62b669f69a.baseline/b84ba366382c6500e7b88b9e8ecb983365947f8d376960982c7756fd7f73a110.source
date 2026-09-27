@@ -1,0 +1,219 @@
+package com.osskn4w7.mcmonitor.neoforge;
+
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.logging.LogUtils;
+import com.osskn4w7.mcmonitor.core.auth.PasswordAuth;
+import com.osskn4w7.mcmonitor.core.server.MonitorServer;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.ServerChatEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.slf4j.Logger;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Properties;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+// 服务端 mod 入口：只做"游戏侧接线"（事件/命令/配置），协议与安全全在 :core
+@Mod(McMonitorMod.MODID)
+public final class McMonitorMod {
+
+    public static final String MODID = "mcmonitor";
+    private static final Logger LOG = LogUtils.getLogger();
+
+    private final Set<UUID> awaitingPassword = ConcurrentHashMap.newKeySet();
+
+    private volatile PasswordAuth auth;
+    private volatile MonitorServer monitor;
+    private volatile LogCapture logCapture;
+    private TickTracker tickTracker;
+    private long serverStartMillis;
+    private int port = 25580;
+    private String bind = "0.0.0.0";
+
+    public McMonitorMod(IEventBus modEventBus) {
+        NeoForge.EVENT_BUS.addListener(this::onServerStarting);
+        NeoForge.EVENT_BUS.addListener(this::onServerStopping);
+        NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
+        NeoForge.EVENT_BUS.addListener(this::onPlayerLoggedIn);
+        NeoForge.EVENT_BUS.addListener(this::onServerChat);
+        NeoForge.EVENT_BUS.addListener(this::onServerTick);
+    }
+
+    // ---------- 生命周期 ----------
+    private void onServerStarting(ServerStartingEvent event) {
+        MinecraftServer server = event.getServer();
+        serverStartMillis = System.currentTimeMillis();
+        loadConfig();
+
+        Path authFile = FMLPaths.CONFIGDIR.get().resolve("mcmonitor-auth.json");
+        auth = new PasswordAuth(authFile);
+        tickTracker = new TickTracker();
+        var backend = new NeoBackend(server, tickTracker, () -> (System.currentTimeMillis() - serverStartMillis) / 1000);
+        monitor = new MonitorServer(port, bind, auth, backend);
+
+        try {
+            monitor.start();
+        } catch (IOException e) {
+            LOG.error("[McMonitor] 监控通道启动失败（端口 {} 可能被占用）: {}", port, e.getMessage());
+            monitor = null;
+        }
+
+        // 日志捕获在通道就绪后挂载
+        logCapture = LogCapture.attach(line -> {
+            MonitorServer m = monitor;
+            if (m != null) m.publishLog(line);
+        });
+
+        if (auth != null && !auth.isConfigured()) {
+            LOG.warn("[McMonitor] 尚未设置监控密码：OP 进服后会收到提示，执行 /mcmonitor setpass 设置");
+        }
+    }
+
+    private void onServerStopping(ServerStoppingEvent event) {
+        MonitorServer m = monitor;
+        if (m != null) m.stop();
+        LogCapture c = logCapture;
+        if (c != null) c.detach();
+    }
+
+    private void onServerTick(ServerTickEvent.Post event) {
+        TickTracker t = tickTracker;
+        if (t != null) t.tick();
+    }
+
+    // ---------- 首次配对引导：首个 OP 进服时提示 ----------
+    private void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        PasswordAuth a = auth;
+        if (a != null && !a.isConfigured() && event.getEntity() instanceof ServerPlayer p && p.hasPermissions(2)) {
+            p.sendSystemMessage(Component.literal(
+                "§e[MC Monitor] 监控通道尚未设置密码，App 无法连接。"));
+            p.sendSystemMessage(Component.literal(
+                "§e请在聊天栏执行 /mcmonitor setpass，然后按提示直接在聊天栏输入密码（不会公屏显示）。"));
+        }
+    }
+
+    // ---------- 对话式设密：下一条聊天消息就是密码（事件被取消，不广播不落日志） ----------
+    private void onServerChat(ServerChatEvent event) {
+        ServerPlayer player = event.getPlayer();
+        if (!awaitingPassword.remove(player.getUUID())) return;
+
+        event.setCanceled(true);
+        String password = event.getRawMessage() != null ? event.getRawMessage() : "";
+        String problem = PasswordAuth.checkPolicy(password);
+        if (problem != null) {
+            player.sendSystemMessage(Component.literal("§c[MC Monitor] 未通过强度校验: " + problem));
+            player.sendSystemMessage(Component.literal("§e请重新执行 /mcmonitor setpass 后再试。"));
+            return;
+        }
+        try {
+            PasswordAuth a = auth;
+            if (a == null) return;
+            a.set(password);
+            MonitorServer m = monitor;
+            if (m != null) m.audit("监控密码已由 " + player.getName().getString() + " 设置/更新");
+            player.sendSystemMessage(Component.literal("§a[MC Monitor] 监控密码已设置。在 App 添加服务器时输入此密码即可连接。"));
+        } catch (IOException e) {
+            player.sendSystemMessage(Component.literal("§c[MC Monitor] 密码保存失败: " + e.getMessage()));
+        }
+    }
+
+    // ---------- /mcmonitor 命令 ----------
+    private void onRegisterCommands(RegisterCommandsEvent event) {
+        event.getDispatcher().register(Commands.literal("mcmonitor")
+            .requires(src -> src.hasPermission(2))
+            .then(Commands.literal("setpass")
+                .executes(ctx -> {
+                    // 玩家：进入对话式输入（避免密码进日志）
+                    if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
+                        awaitingPassword.add(player.getUUID());
+                        player.sendSystemMessage(Component.literal("§a请在聊天栏直接输入新密码（发送后不会公屏显示）。"));
+                        player.sendSystemMessage(Component.literal("§7要求：长度≥8，同时包含数字、小写、大写和符号。"));
+                        return 1;
+                    }
+                    ctx.getSource().sendFailure(Component.literal("控制台请用: mcmonitor setpass <密码>"));
+                    return 0;
+                })
+                .then(Commands.argument("password", StringArgumentType.greedyString())
+                    .executes(ctx -> {
+                        // 带参仅限控制台（游戏内带参会进命令日志，一律拒绝）
+                        if (ctx.getSource().getEntity() instanceof ServerPlayer) {
+                            ctx.getSource().sendFailure(Component.literal(
+                                "玩家请勿在命令中附带密码（会进入服务器日志）。请直接执行 /mcmonitor setpass，然后聊天输入。"));
+                            return 0;
+                        }
+                        String password = StringArgumentType.getString(ctx, "password");
+                        String problem = PasswordAuth.checkPolicy(password);
+                        if (problem != null) {
+                            ctx.getSource().sendFailure(Component.literal("未通过强度校验: " + problem));
+                            return 0;
+                        }
+                        PasswordAuth a = auth;
+                        if (a == null) return 0;
+                        try {
+                            a.set(password);
+                            MonitorServer m = monitor;
+                            if (m != null) m.audit("监控密码已由控制台设置/更新");
+                            ctx.getSource().sendSuccess(() -> Component.literal("[MC Monitor] 监控密码已设置/更新。"), false);
+                            return 1;
+                        } catch (IOException e) {
+                            ctx.getSource().sendFailure(Component.literal("保存失败: " + e.getMessage()));
+                            return 0;
+                        }
+                    })))
+            .then(Commands.literal("status")
+                .executes(ctx -> {
+                    PasswordAuth a = auth;
+                    MonitorServer m = monitor;
+                    boolean configured = a != null && a.isConfigured();
+                    boolean running = m != null && m.isRunning();
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "[MC Monitor] 通道: " + (running ? "运行中 " + bind + ":" + port : "未运行")
+                            + " | 密码: " + (configured ? "已设置" : "未设置（执行 /mcmonitor setpass）")
+                            + (m != null ? " | 当前连接: " + m.sessionCount() : "")), false);
+                    return 1;
+                })));
+    }
+
+    // ---------- 配置 ----------
+    private void loadConfig() {
+        Path cfgFile = FMLPaths.CONFIGDIR.get().resolve("mcmonitor.properties");
+        Properties props = new Properties();
+        if (Files.exists(cfgFile)) {
+            try (Reader r = Files.newBufferedReader(cfgFile)) {
+                props.load(r);
+            } catch (IOException e) {
+                LOG.warn("[McMonitor] 读取 mcmonitor.properties 失败: {}", e.getMessage());
+            }
+        } else {
+            try (Writer w = Files.newBufferedWriter(cfgFile)) {
+                w.write("# MC Monitor 配置\n");
+                w.write("# 监控端口（App 连接用）\nport=25580\n");
+                w.write("# 绑定地址：0.0.0.0=所有网卡（公网服请用防火墙限制来源）；127.0.0.1=仅本机可连\nbind=0.0.0.0\n");
+            } catch (IOException e) {
+                LOG.warn("[McMonitor] 写默认配置失败: {}", e.getMessage());
+            }
+        }
+        try {
+            port = Integer.parseInt(props.getProperty("port", "25580").trim());
+        } catch (NumberFormatException ignored) {
+        }
+        bind = props.getProperty("bind", "0.0.0.0").trim();
+    }
+}

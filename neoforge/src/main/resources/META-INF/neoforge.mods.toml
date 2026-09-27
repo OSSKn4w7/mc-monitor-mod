@@ -1,0 +1,29 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+
+[[mods]]
+modId="mcmonitor"
+version="1.0.0"
+displayName="MC Monitor"
+authors="osskn4w7"
+displayTest="IGNORE_ALL_VERSION"
+description='''MC服务器监控 App 的服务端配套 mod：提供鉴权监控通道（状态/日志/控制台命令）。
+
+首次使用：游戏内 OP 执行 /mcmonitor setpass 设置密码（走聊天输入，不进日志），或服务器控制台执行 mcmonitor setpass <密码>。
+
+安全说明：通道密码采用 PBKDF2 挑战-响应验证，密码不落盘不过网；命令执行全程审计；内置防爆破封禁。'''
+
+[[dependencies.mcmonitor]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.0,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.mcmonitor]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.21.2)"
+ordering="NONE"
+side="BOTH"

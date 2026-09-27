@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-09-27T01:38:40.914Z",
+  "sessionId": "sess_afb228ba-7c6a-4012-a9d4-7ea15711ab33",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "D:\\1Zcode\\安卓模拟器\\BlankApp\\app\\src\\main\\java\\com\\example\\mcmonitor\\data\\McPing.kt",
+  "outcome": "inconclusive",
+  "coverage": "partial",
+  "findingCount": 0,
+  "durationMs": 11,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}
