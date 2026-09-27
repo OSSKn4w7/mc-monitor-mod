@@ -115,7 +115,7 @@ public final class McMonitorMod {
         if (!awaitingPassword.remove(player.getUUID())) return;
 
         event.setCanceled(true);
-        String password = event.getRawMessage() != null ? event.getRawMessage() : "";
+        String password = event.getRawText() != null ? event.getRawText() : "";
         String problem = PasswordAuth.checkPolicy(password);
         if (problem != null) {
             player.sendSystemMessage(Component.literal("§c[MC Monitor] 未通过强度校验: " + problem));

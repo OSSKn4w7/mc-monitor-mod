@@ -24,7 +24,7 @@ neoForge {
 
     mods {
         create("mcmonitor") {
-            sourceSet = sourceSets.main.get()
+            sourceSet(sourceSets.main.get())
         }
     }
 

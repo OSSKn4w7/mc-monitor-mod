@@ -44,7 +44,18 @@ final class NeoBackend implements MonitorBackend {
                 CommandSourceStack css = server.createCommandSourceStack()
                     .withPermission(4)          // 服主级权限
                     .withSuppressedOutput();    // 输出统一走日志流，避免重复广播
-                int rc = server.getCommands().performPrefixedCommand(css, command);
+                String withoutSlash = command.startsWith("/") ? command.substring(1) : command;
+                // 1.21.1 映射下 performPrefixedCommand 返回 void，这里走 brigadier 拿返回码
+                com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher =
+                    server.getCommands().getDispatcher();
+                var parseResults = dispatcher.parse(withoutSlash, css);
+                int rc;
+                try {
+                    rc = dispatcher.execute(parseResults);
+                } catch (com.mojang.brigadier.exceptions.CommandSyntaxException syntaxEx) {
+                    // 命令语法错误属于正常业务结果，把提示原样带回
+                    return "命令无法执行: " + syntaxEx.getMessage();
+                }
                 return "已执行（返回码 " + rc + "），完整输出见日志流";
             }).get(10, TimeUnit.SECONDS);
         } catch (Exception e) {

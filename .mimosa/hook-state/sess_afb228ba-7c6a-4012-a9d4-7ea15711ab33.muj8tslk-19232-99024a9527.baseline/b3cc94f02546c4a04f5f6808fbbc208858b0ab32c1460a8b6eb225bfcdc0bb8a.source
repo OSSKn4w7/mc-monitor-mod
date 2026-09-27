@@ -77,11 +77,16 @@ public final class MonitorServer {
                     reject(socket, "连接数已达上限");
                     continue;
                 }
-                ClientSession session = new ClientSession(this, socket);
-                sessions.add(session);
-                Thread t = new Thread(session, "McMonitor-Session-" + session.remoteIp());
-                t.setDaemon(true);
-                t.start();
+                try {
+                    ClientSession session = new ClientSession(this, socket);
+                    sessions.add(session);
+                    Thread t = new Thread(session, "McMonitor-Session-" + session.remoteIp());
+                    t.setDaemon(true);
+                    t.start();
+                } catch (Exception e) {
+                    audit("会话创建失败: " + e.getMessage());
+                    try { socket.close(); } catch (Exception ignore) {}
+                }
             } catch (IOException e) {
                 if (running.get()) audit("accept 异常: " + e.getMessage());
             }

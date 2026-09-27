@@ -118,15 +118,15 @@ final class ClientSession implements Runnable {
         Object respObj = msg.get("response");
         String responseB64 = respObj == null ? "" : String.valueOf(respObj);
 
-        // 防爆破检查覆盖"要挑战"和"交响应"两个阶段
-        String deny = server.guard().precheck(remoteIp);
-        if (deny != null) { err(deny); return; }
-
+        // 防爆破：新挑战走完整限频；响应提交只查封禁（一次登录=挑战+响应对）
         if (responseB64.isEmpty()) {
-            // 第 1 步：下发挑战（nonce 已暂存在 PasswordAuth 里）
+            String deny = server.guard().precheck(remoteIp);
+            if (deny != null) { err(deny); return; }
             send(server.auth().beginChallenge());
             return;
         }
+        String deny = server.guard().ifBanned(remoteIp);
+        if (deny != null) { err(deny); return; }
 
         // 第 2 步：校验响应
         if (server.auth().verify(responseB64)) {

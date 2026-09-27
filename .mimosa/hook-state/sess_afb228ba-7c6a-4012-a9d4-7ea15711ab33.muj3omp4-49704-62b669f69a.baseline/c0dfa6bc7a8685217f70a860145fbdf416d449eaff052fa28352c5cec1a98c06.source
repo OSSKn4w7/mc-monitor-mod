@@ -1,7 +1,0 @@
-// 根构建脚本：统一 Java 21 工具链（Minecraft 1.21.1 运行时要求 Java 21）
-allprojects {
-    repositories {
-        mavenCentral()
-        maven("https://maven.neoforged.net/releases")
-    }
-}

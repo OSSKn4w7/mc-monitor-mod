@@ -1,0 +1,370 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260927T030533514Z-15056-1b676d861f82",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "baseline",
+      "target": ".",
+      "reason": "baseline_partial: baseline capture had enumeration or snapshot errors"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": false,
+      "captured_files": 12,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 25,
+      "compensated_target_count": 12
+    },
+    "change_tracking": {
+      "touched_observed": 12,
+      "touched_retained": 12,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 12,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 12,
+      "selected_files": 12,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 11,
+      "scanned_files": 11,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 1,
+      "project_checks_completed": 1
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "baseline_partial": 1,
+      "project_check_failed": 1
+    },
+    "reasons": [
+      {
+        "code": "baseline_partial",
+        "stage": "baseline",
+        "target": ".",
+        "detail": "baseline capture had enumeration or snapshot errors",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline",
+        "target": ".",
+        "detail": "baseline_partial: baseline capture had enumeration or snapshot errors",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-09-27T03:05:33.514Z",
+  "session_id": "sess_afb228ba-7c6a-4012-a9d4-7ea15711ab33",
+  "target": ".",
+  "revision": "782ab9c6c0537967b34445339111eb22af68e052",
+  "rules_version": "unavailable",
+  "diff_hash": "4f1c55aec71da0779f3cc5a8f902fb86c512364d21237ae24b3f48645e2515c2",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 11,
+    "changed_files": [
+      {
+        "file": "build.gradle.kts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 2
+          }
+        ],
+        "before_hash": "c6bfee8bb0adf1aa4b49869176c70adc7a2b459aa13b827e7824ddce3b3d5234",
+        "after_hash": "1bd3027239cbdaa3b2f3239ae4de03f376cdc9a747faffad9b21e42570c39773"
+      },
+      {
+        "file": "core/src/main/java/com/osskn4w7/mcmonitor/core/auth/AuthGuard.java",
+        "ranges": [
+          {
+            "start": 21,
+            "end": 21
+          },
+          {
+            "start": 38,
+            "end": 51
+          }
+        ],
+        "before_hash": "a4f8c4e6dfdff830e4aa99482632d97d71d565a691d32a48fb55ca5bdffc00a8",
+        "after_hash": "7e2a6cc4df3531c1b2257a89e7d7f751b68ec2090ed7249c5fd01c1bfa48fc8f"
+      },
+      {
+        "file": "core/src/main/java/com/osskn4w7/mcmonitor/core/auth/PasswordAuth.java",
+        "ranges": [
+          {
+            "start": 135,
+            "end": 136
+          }
+        ],
+        "before_hash": "ec803f1dad3f565aba7ad3941c2a82b63c3608049585bb74210100201643762d",
+        "after_hash": "ed03fb9bc5250722f3f9d8ac8b988a0e2a855846d1f1900948c4765350f045a7"
+      },
+      {
+        "file": "core/src/main/java/com/osskn4w7/mcmonitor/core/server/ClientSession.java",
+        "ranges": [
+          {
+            "start": 121,
+            "end": 121
+          },
+          {
+            "start": 123,
+            "end": 124
+          },
+          {
+            "start": 128,
+            "end": 129
+          }
+        ],
+        "before_hash": "0d805786509ca8b24cf64f0d7ad2accee56384f9a5b0a442ac8b25207994ec31",
+        "after_hash": "43e24b5af34d768b07662cf559157d7cd63d115408ceb37dcef5366ec5716c29"
+      },
+      {
+        "file": "core/src/main/java/com/osskn4w7/mcmonitor/core/server/MonitorServer.java",
+        "ranges": [
+          {
+            "start": 80,
+            "end": 89
+          }
+        ],
+        "before_hash": "37fc8f25fd68f485dfb2d2fe94da7793a14bec74465cc36191eb52d78b829c55",
+        "after_hash": "3a20dfa0cf889b0419fd486ae620f83d3e4f2878796789949690d8aa2f81409c"
+      },
+      {
+        "file": "harness/src/main/java/com/osskn4w7/mcmonitor/harness/Harness.java",
+        "ranges": [
+          {
+            "start": 13,
+            "end": 13
+          },
+          {
+            "start": 110,
+            "end": 111
+          },
+          {
+            "start": 150,
+            "end": 150
+          }
+        ],
+        "before_hash": "2019005ce3fbe5c3bfa65169e2536341124516062898784d8cbe3c376aa51eda",
+        "after_hash": "34f52ad3adf6a0292b5cd407d63e2af95b007ebe8dc2c656a9d091c32d51896c"
+      },
+      {
+        "file": "harness/src/main/java/com/osskn4w7/mcmonitor/harness/SlpProbe.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 78
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "5ed71b2b655e54dbf51d9378abb25b90bcd3167772c42f7907ab0b38fd76fce4"
+      },
+      {
+        "file": "harness/src/main/java/com/osskn4w7/mcmonitor/harness/SmokeTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 85
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "2603fc9675d67dfab6fd8f22048dffc0d30fc71e8011ee5b72463058e4105b4e"
+      },
+      {
+        "file": "neoforge/build.gradle.kts",
+        "ranges": [
+          {
+            "start": 27,
+            "end": 27
+          }
+        ],
+        "before_hash": "495c6ebbf2295ec502b57fcbaa646849a144e9f4062ebe520fa9cc95326f8b7b",
+        "after_hash": "f5403d68f9a2f10e69aee0cbc66997746f5be5c570bef4b17a6b354144f91371"
+      },
+      {
+        "file": "neoforge/src/main/java/com/osskn4w7/mcmonitor/neoforge/McMonitorMod.java",
+        "ranges": [
+          {
+            "start": 118,
+            "end": 118
+          }
+        ],
+        "before_hash": "63b7aaf61639e9bd169c0b0956ff48186aaaaef3155aac1c2c24ca130865e4e2",
+        "after_hash": "bf7fc17ce3415bf888a0c8dd39dabe693c465b4989398752188fae1610340981"
+      },
+      {
+        "file": "neoforge/src/main/java/com/osskn4w7/mcmonitor/neoforge/NeoBackend.java",
+        "ranges": [
+          {
+            "start": 47,
+            "end": 58
+          }
+        ],
+        "before_hash": "c10aad80e6a8ce93bfa5611c685e443cbff1ee5d58bab15d5bad4bba4a82efd5",
+        "after_hash": "3669546de42fb8da14f9e8ceba266e39351690549eee69958b76e041d1861e93"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-09-27T03:05:32.029Z",
+    "completed_at": "2026-09-27T03:05:33.514Z",
+    "duration_ms": 1485,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 1485,
+    "peakMemoryBytes": 142528512,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 11,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [
+    {
+      "finding_id": "mimosa-4ba672c1edb0019bd42c0d3c",
+      "file": "neoforge/src/main/java/com/osskn4w7/mcmonitor/neoforge/NeoBackend.java",
+      "line": 50,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "安全风险",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-09-27T01:05:59.502Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0addcf87d0be3b740c26420e7b1017e3785d8c8efd9fea5177507113920a56b8",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-4ba672c1edb0019bd42c0d3c",
+      "file": "neoforge/src/main/java/com/osskn4w7/mcmonitor/neoforge/NeoBackend.java",
+      "line": 50,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-09-27T01:05:59.502Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0addcf87d0be3b740c26420e7b1017e3785d8c8efd9fea5177507113920a56b8",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-4ba672c1edb0019bd42c0d3c",
+      "file": "neoforge/src/main/java/com/osskn4w7/mcmonitor/neoforge/NeoBackend.java",
+      "line": 50,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-09-27T01:07:04.155Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0addcf87d0be3b740c26420e7b1017e3785d8c8efd9fea5177507113920a56b8",
+        "candidate_before_evidence_hash": "0addcf87d0be3b740c26420e7b1017e3785d8c8efd9fea5177507113920a56b8",
+        "post_change_evidence_hash_at_previous_location": "1c37bd5b1cbf66489f7250a59029f6988aab4edb60d84c393e02c21c7e536b77",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-4ba672c1edb0019bd42c0d3c",
+      "file": "neoforge/src/main/java/com/osskn4w7/mcmonitor/neoforge/NeoBackend.java",
+      "line": 50,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-09-27T01:07:04.155Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0addcf87d0be3b740c26420e7b1017e3785d8c8efd9fea5177507113920a56b8",
+        "candidate_before_evidence_hash": "0addcf87d0be3b740c26420e7b1017e3785d8c8efd9fea5177507113920a56b8",
+        "post_change_evidence_hash_at_previous_location": "1c37bd5b1cbf66489f7250a59029f6988aab4edb60d84c393e02c21c7e536b77",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    }
+  ],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_afb228ba-7c6a-4012-a9d4-7ea15711ab33-20260927T030533514Z-15056-1b676d861f82.json",
+    "latest_report": ".mimosa/reports/task-review-sess_afb228ba-7c6a-4012-a9d4-7ea15711ab33.json",
+    "history_summary": ".mimosa/history/run-20260927T030533514Z-15056-1b676d861f82.json"
+  }
+}

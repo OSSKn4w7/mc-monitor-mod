@@ -10,6 +10,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -106,6 +107,8 @@ public final class Harness {
             readPacket(in); // status request
             byte[] body = statusBody();
             sendPacket(out, body);
+            System.out.println("SLP response -> " + socket.getRemoteSocketAddress() + " bytes=" + body.length);
+            System.out.flush();
             try {
                 byte[] ping = readPacket(in); // ping (0x01 + long)
                 if (ping.length > 0 && ping[0] == 0x01) sendPacket(out, ping); // pong 原样返回
@@ -144,7 +147,7 @@ public final class Harness {
     }
 
     private static void sendPacket(DataOutputStream out, byte[] body) throws Exception {
-        out.writeVarInt(body.length);
+        writeVarInt(out, body.length);
         out.write(body);
         out.flush();
     }

@@ -132,7 +132,8 @@ public final class PasswordAuth {
         m.put("iters", (long) iters);
         m.put("verifier", Base64.getEncoder().encodeToString(verifier));
         m.put("note", "只存 PBKDF2 验证器，不存密码。删除此文件即可重设监控密码。");
-        Files.createDirectories(file.getParent());
+        Path parent = file.getParent();
+        if (parent != null) Files.createDirectories(parent);
         Files.writeString(file, MiniJson.write(m), StandardCharsets.UTF_8);
     }
 

@@ -18,7 +18,7 @@ public final class AuthGuard {
 
     private final Map<String, Entry> entries = new ConcurrentHashMap<>();
 
-    // 返回 null 表示允许；否则返回拒绝原因
+    // 返回 null 表示允许；否则返回拒绝原因。（只用于"请求新挑战"阶段）
     public String precheck(String ip) {
         long now = System.currentTimeMillis();
         Entry e = entries.computeIfAbsent(ip, k -> new Entry());
@@ -31,6 +31,20 @@ public final class AuthGuard {
                 return "操作太快，请稍候";
             }
             e.lastAttempt = now;
+            return null;
+        }
+    }
+
+    // 响应提交阶段只查封禁（挑战+响应对算一次尝试，不应互相触发限频）
+    public String ifBanned(String ip) {
+        long now = System.currentTimeMillis();
+        Entry e = entries.get(ip);
+        if (e == null) return null;
+        synchronized (e) {
+            if (now < e.bannedUntil) {
+                long remainSec = (e.bannedUntil - now) / 1000;
+                return "尝试过于频繁，请 " + remainSec + " 秒后再试";
+            }
             return null;
         }
     }
